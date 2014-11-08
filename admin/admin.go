@@ -9,6 +9,10 @@ import (
 	"github.com/docker/libchan/spdy"
 )
 
+var avaliablePlugins = map[string]daemon.Plugin{
+	"exec": daemon.NewExecPlugin(),
+}
+
 func New(d daemon.Daemon, logger *logrus.Logger) *Admin {
 	return &Admin{
 		daemon: d,
@@ -71,7 +75,9 @@ func (a *Admin) receiveLoop(receiver libchan.Receiver) {
 		switch c.Op {
 		case "addplugin":
 			// <name> <args...>
-			if err := a.daemon.LoadPlugin(c.Args[0], c.Args[1:]); err != nil {
+			name := c.Args[0]
+			p := avaliablePlugins[name]
+			if err := a.daemon.LoadPlugin(name, p); err != nil {
 				emit(c.Out, "error", err.Error())
 				c.Out.Close()
 				continue
