@@ -6,7 +6,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/d2/daemon"
-	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
 )
 
@@ -50,10 +49,7 @@ func (a *Admin) Listen(socketPath string) error {
 			a.logger.WithField("error", err).Error("accept connection")
 			continue
 		}
-		if err := a.handleConn(conn); err != nil {
-			a.logger.WithField("error", err).Error("handle connection")
-			continue
-		}
+		go a.handleConn(conn)
 	}
 	return nil
 }
@@ -63,23 +59,20 @@ func (a *Admin) Close() error {
 	return a.listener.Close()
 }
 
-func (a *Admin) handleConn(conn net.Conn) error {
+func (a *Admin) handleConn(conn net.Conn) {
 	transport, err := spdy.NewServerTransport(conn)
 	if err != nil {
 		conn.Close()
-		return err
+		a.logger.WithField("error", err).Error("new spdy transport")
+		return
 	}
 	defer transport.Close()
 	receiver, err := transport.WaitReceiveChannel()
 	if err != nil {
-		return err
+		a.logger.WithField("error", err).Error("new receive channel")
+		return
 	}
 
-	go a.receiveLoop(receiver)
-	return nil
-}
-
-func (a *Admin) receiveLoop(receiver libchan.Receiver) {
 	for {
 		var c *command
 		if err := receiver.Receive(&c); err != nil {

@@ -41,7 +41,7 @@ func (t *testDaemon) LoadPlugin(name string, p Plugin) error {
 	if p == nil {
 		return ErrNilPlugin
 	}
-	t.plugins["name"] = p
+	t.plugins[name] = p
 	return nil
 }
 
