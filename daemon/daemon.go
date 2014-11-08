@@ -46,6 +46,7 @@ func (t *testDaemon) LoadPlugin(name string, p Plugin) error {
 }
 
 func (t *testDaemon) GetPlugin(name string) (Plugin, error) {
+	t.logger.Println(t.plugins)
 	p, exists := t.plugins[name]
 	if !exists {
 		return nil, ErrPluginNotLoaded

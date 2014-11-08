@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	logger = logrus.New()
-
+	logger      = logrus.New()
 	globalFlags = []cli.Flag{
 		cli.BoolFlag{Name: "debug", Usage: "enable debug output for the logs"},
 	}
@@ -28,6 +27,7 @@ func main() {
 	app.Usage = "docker is an app to manage distriubuted systems"
 	app.Version = "2.0"
 	app.Email = "core@docker.com"
+
 	app.Before = preload
 	app.Flags = globalFlags
 	app.Commands = []cli.Command{

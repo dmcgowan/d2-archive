@@ -116,6 +116,7 @@ func (a *Admin) receiveLoop(receiver libchan.Receiver) {
 			c.Out.Send(e)
 			c.Out.Close()
 		default:
+			a.logger.Debugf("getting plugin for %q", c.Op)
 			plugin, err := a.daemon.GetPlugin(c.Op)
 			if err != nil {
 				emit(c.Out, "error", err.Error())
