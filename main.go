@@ -30,6 +30,9 @@ func main() {
 	app.Email = "core@docker.com"
 	app.Before = preload
 	app.Flags = globalFlags
+	app.Commands = []cli.Command{
+		daemonCommand,
+	}
 	if err := app.Run(os.Args); err != nil {
 		logger.Fatal(err)
 	}

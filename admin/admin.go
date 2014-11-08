@@ -2,6 +2,7 @@ package admin
 
 import (
 	"net"
+	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/d2/daemon"
@@ -21,20 +22,31 @@ func New(d daemon.Daemon, logger *logrus.Logger) *Admin {
 }
 
 type Admin struct {
-	daemon daemon.Daemon
-	logger *logrus.Logger
+	running  bool
+	daemon   daemon.Daemon
+	listener net.Listener
+	logger   *logrus.Logger
 }
 
 func (a *Admin) Listen(socketPath string) error {
 	a.logger.WithField("socket", socketPath).Debug("creating chan")
+	a.running = true
 	l, err := net.Listen("unix", socketPath)
 	if err != nil {
 		return err
 	}
+	a.listener = l
+	defer func() {
+		l.Close()
+		os.Remove(socketPath)
+	}()
 
-	for {
+	for a.running {
 		conn, err := l.Accept()
 		if err != nil {
+			if !a.running {
+				return nil
+			}
 			a.logger.WithField("error", err).Error("accept connection")
 			continue
 		}
@@ -43,6 +55,12 @@ func (a *Admin) Listen(socketPath string) error {
 			continue
 		}
 	}
+	return nil
+}
+
+func (a *Admin) Close() error {
+	a.running = false
+	return a.listener.Close()
 }
 
 func (a *Admin) handleConn(conn net.Conn) error {
