@@ -7,6 +7,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/libcontainer"
+	"github.com/docker/libcontainer/namespaces"
 )
 
 var initCommand = cli.Command{
@@ -25,8 +26,8 @@ func initAction(context *cli.Context) {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	pipe := os.NewFile(uintptr(pipeFd), "pipe")
-	if err := namespaces.Init(config, rootfs, console, pipe, []string(context.Args())); err != nil {
+	pipe := os.NewFile(3, "pipe")
+	if err := namespaces.Init(config, rootfs, "", pipe, []string(context.Args())); err != nil {
 		logger.Fatal(err)
 	}
 }

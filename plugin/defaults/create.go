@@ -3,7 +3,6 @@ package defaults
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 
 	"github.com/docker/d2/core"
@@ -39,7 +38,7 @@ func (d *DefaultPlugin) Create(image *core.Image, config *core.UserConfig) (*cor
 
 func (d *DefaultPlugin) Start(container *core.Container, stdout, stderr io.Writer) (int, error) {
 	config := template.New()
-	config.Rootfs = filepath.Join("/tmp/d2/images", container.Image.ID)
+	config.RootFs = filepath.Join("/tmp/d2/images", container.Image.ID)
 	config.Hostname = "testing"
-	return namespaces.Exec(config, ioutil.Discard, stdout, stderr, "", "", container.Args, namespaces.DefaultCreateCommand, nil)
+	return namespaces.Exec(config, nil, stdout, stderr, "", "", container.Args, namespaces.DefaultCreateCommand, nil)
 }
