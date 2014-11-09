@@ -6,6 +6,7 @@ type command struct {
 	Target string // FIXME: dont ever use this!!!
 	Op     string
 	Args   []string
+	KV     map[string]interface{}
 	Out    libchan.Sender
 }
 

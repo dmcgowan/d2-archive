@@ -12,6 +12,7 @@ import (
 
 var avaliablePlugins = map[string]daemon.Plugin{
 	"exec": daemon.NewExecPlugin(),
+	"net":  daemon.NewNetPlugin(),
 }
 
 func New(d daemon.Daemon, logger *logrus.Logger) *Admin {
@@ -96,11 +97,12 @@ func (a *Admin) handleConn(conn net.Conn) {
 				c.Out.Close()
 				continue
 			}
-			if err := a.sb.StartRouting(p.GetPlug()); err != nil {
-				emit(c.Out, "error", err.Error())
-				c.Out.Close()
-				continue
-			}
+			a.sb.StartRouting(p.GetPlug())
+			//if err := <-; err != nil {
+			//	emit(c.Out, "error", err.Error())
+			//	c.Out.Close()
+			//	continue
+			//}
 			emit(c.Out, "status", "OK")
 			c.Out.Close()
 		case "listplugins":
@@ -121,6 +123,7 @@ func (a *Admin) handleConn(conn net.Conn) {
 			var command rpc.Cmd
 			command.Op = c.Op
 			command.Args = c.Args
+			command.KV = c.KV
 			command.Out = c.Out
 			if err := a.sb.Call(&command); err != nil {
 				emit(c.Out, "error", err.Error())
