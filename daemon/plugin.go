@@ -4,12 +4,14 @@ import (
 	"io"
 	"os/exec"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libchan"
+	"github.com/docker/libchan/rpc"
 )
 
 type Plugin interface {
 	Name() string
-	Process(args []string, sender libchan.Sender) error
+	GetPlug() rpc.Plug
 }
 
 func NewExecPlugin() Plugin {
@@ -21,6 +23,36 @@ type ExecPlugin struct {
 
 func (e *ExecPlugin) Name() string {
 	return "exec"
+}
+
+func (e *ExecPlugin) GetPlug() rpc.Plug {
+	return func(receiver libchan.Receiver, sender libchan.Sender) error {
+		cmd := &rpc.Cmd{
+			Op:   "register",
+			Args: []string{"start"},
+		}
+		if err := sender.Send(cmd); err != nil {
+			return err
+		}
+
+		for {
+			var cmd rpc.Cmd
+			if err := receiver.Receive(&cmd); err != nil {
+				return err
+			}
+			switch cmd.Op {
+			case "start":
+				if err := e.Process(cmd.Args, cmd.Out); err != nil {
+					return err
+				}
+			default:
+				log.Debugf("unhandled op: %s", cmd.Op)
+			}
+			if err := cmd.Out.Close(); err != nil {
+				log.Errorf("Error closing send out channel")
+			}
+		}
+	}
 }
 
 func (e *ExecPlugin) Process(args []string, sender libchan.Sender) error {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/d2/daemon"
+	"github.com/docker/libchan/rpc"
 	"github.com/docker/libchan/spdy"
 )
 
@@ -17,12 +18,14 @@ func New(d daemon.Daemon, logger *logrus.Logger) *Admin {
 	return &Admin{
 		daemon: d,
 		logger: logger,
+		sb:     rpc.NewSwitchBoard(),
 	}
 }
 
 type Admin struct {
 	running  bool
 	daemon   daemon.Daemon
+	sb       *rpc.SwitchBoard
 	listener net.Listener
 	logger   *logrus.Logger
 }
@@ -74,14 +77,14 @@ func (a *Admin) handleConn(conn net.Conn) {
 	}
 
 	for {
-		var c *command
+		var c command
 		if err := receiver.Receive(&c); err != nil {
 			a.logger.WithField("error", err).Error("receive command")
 			break
 		}
 		a.logger.WithFields(logrus.Fields{
 			"op": c.Op,
-		}).Debug("receive command")
+		}).Debugf("receive command %#v", c)
 
 		switch c.Op {
 		case "addplugin":
@@ -89,6 +92,11 @@ func (a *Admin) handleConn(conn net.Conn) {
 			name := c.Args[0]
 			p := avaliablePlugins[name]
 			if err := a.daemon.LoadPlugin(name, p); err != nil {
+				emit(c.Out, "error", err.Error())
+				c.Out.Close()
+				continue
+			}
+			if err := a.sb.StartRouting(p.GetPlug()); err != nil {
 				emit(c.Out, "error", err.Error())
 				c.Out.Close()
 				continue
@@ -110,17 +118,15 @@ func (a *Admin) handleConn(conn net.Conn) {
 			c.Out.Close()
 		default:
 			a.logger.Debugf("getting plugin for %q", c.Op)
-			plugin, err := a.daemon.GetPlugin(c.Op)
-			if err != nil {
+			var command rpc.Cmd
+			command.Op = c.Op
+			command.Args = c.Args
+			command.Out = c.Out
+			if err := a.sb.Call(&command); err != nil {
 				emit(c.Out, "error", err.Error())
 				c.Out.Close()
 				continue
 			}
-			if err := plugin.Process(c.Args, c.Out); err != nil {
-				a.logger.WithField("error", err).Errorf("%s process command", c.Op)
-				emit(c.Out, "error", err.Error())
-			}
-			c.Out.Close()
 		}
 	}
 }
