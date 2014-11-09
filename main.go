@@ -32,6 +32,7 @@ func main() {
 	app.Flags = globalFlags
 	app.Commands = []cli.Command{
 		daemonCommand,
+		initCommand,
 	}
 	if err := app.Run(os.Args); err != nil {
 		logger.Fatal(err)
